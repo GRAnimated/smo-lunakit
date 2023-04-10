@@ -56,6 +56,8 @@ Code Documentation: https://github.com/Amethyst-szs/smo-lunakit/wiki/Code-Docume
 #include "devgui/windows/WindowActorBrowse.h"
 #include "devgui/windows/WindowFPS.h"
 #include "devgui/windows/WindowLoadLog.h"
+#include "devgui/windows/WindowPresets.h"
+#include "devgui/windows/WindowGBuffer.h"
 
 // All tabs on the bar the top of the screen
 #include "devgui/homemenu/HomeMenuBase.h"
@@ -129,6 +131,8 @@ public:
     DevGuiSettings* getSettings() { return mSettings; } // Current settings (used in the settings home menu, written to save file)
     PrimMenuSettings* getPrimitiveSettings() { return mPrimitiveSettings; } // Settings for the prim home menu tab, written to save file
     DevGuiTheme* getTheme() { return mTheme; } // Controls the theme, including reading data from the SD card
+    GraphicsPresetSet *getPresetSettings() { return mPresetSet; };
+    GBufferSet *getGBufferSettings() { return mGBufferSet; }
     DevGuiSaveData* getSaveData() { return mSaveData; } // Preferences and settings, written to the save file
     CustomStageManager* getCustomStageManager() { return mCustomList; } // Custom stage plugin support
     PrimitiveQueue* getPrimitiveQueue() { return mPrimQueue; } // Accessible primitive renderer queueing
@@ -144,6 +148,10 @@ private:
     DevGuiSettings* mSettings = nullptr; // Current settings (used in the settings home menu, written to save file)
     PrimMenuSettings* mPrimitiveSettings = nullptr; // Settings for the prim home menu tab, written to save file
     DevGuiTheme* mTheme = nullptr; // Controls the theme, including reading data from the SD card
+    
+    GraphicsPresetSet *mPresetSet = nullptr;
+    GBufferSet *mGBufferSet = nullptr;
+
     DevGuiSaveData* mSaveData = nullptr; // Preferences and settings, written to the save file
 
     CustomStageManager* mCustomList = nullptr; // Custom stage plugin support

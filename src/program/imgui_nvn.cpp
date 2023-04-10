@@ -29,8 +29,13 @@ namespace nvnImGui {
 void setViewport(nvn::CommandBuffer *cmdBuf, int x, int y, int w, int h) {
     tempSetViewportFunc(cmdBuf, x, y, w, h);
 
-    if (hasInitImGui)
-        ImGui::GetIO().DisplaySize = ImVec2(w - x, h - y);
+    if (hasInitImGui) {
+        ImGuiIO& io = ImGui::GetIO();
+
+        io.DisplaySize = ImVec2(w - x, h - y);
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.ConfigWindowsResizeFromEdges = true;
+    }
 }
 
 void presentTexture(nvn::Queue *queue, nvn::Window *window, int texIndex) {

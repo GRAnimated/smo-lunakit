@@ -18,6 +18,8 @@ void DevGuiManager::createElements()
     createWindow<WindowActorBrowse>("Actor Browser", false, true, 2);
     createWindow<WindowFPS>("FPS Window", true, false, 1);
     createWindow<WindowLoadLog>("Load Log", false, false, 1);
+    createWindow<WindowPresets>("Presets", true, true, 1);
+    createWindow<WindowGBuffer>("GBuffers", true, true, 1);
 
     // Create all home menu tabs
     createHomeMenuItem<HomeMenuFile>("File");
@@ -56,6 +58,9 @@ void DevGuiManager::init(sead::Heap* heap)
     mTheme = new DevGuiTheme(this); // https://github.com/Amethyst-szs/smo-lunakit/wiki/Code-Documentation#themes
     mTheme->init();
 
+    mPresetSet = new GraphicsPresetSet();
+    mGBufferSet = new GBufferSet();
+    
     // Create all windows and home menu items
     createElements();
 

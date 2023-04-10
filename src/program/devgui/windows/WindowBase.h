@@ -40,7 +40,7 @@ struct DevGuiWindowConfig {
     ImGuiTabItemFlags mTabItemFlags = ImGuiTabItemFlags_None;
 
     // Default text size
-    float mFontSize = 1.5f;
+    float mFontSize = 1.0f;
 
     // Controlled by the setupAnchor function of a window, not meant to be set otherwise
     ImVec2 mTrans = ImVec2(0, 0);

@@ -6,6 +6,7 @@
 
 
 
+#include "devgui/windows/WindowPresets.h"
 #include "lib.hpp"
 #include "imgui_backend/imgui_impl_nvn.hpp"
 #include "patches.hpp"
@@ -48,7 +49,6 @@
 #include "al/collision/KCollisionServer.h"
 #include "al/collision/alCollisionUtil.h"
 
-#include "agl/utl.h"
 #include "imgui_nvn.h"
 #include "helpers/InputHelper.h"
 #include "init.h"
@@ -224,6 +224,158 @@ HOOK_DEFINE_TRAMPOLINE(UpdateLunaKit) {
     }
 };
 
+namespace al {
+    class GraphicsSystemInfo;
+}
+
+HOOK_DEFINE_TRAMPOLINE(CubeMapSetter) {
+    static void Callback(al::GraphicsSystemInfo *i, al::Resource const*r, char const*a, char const*b) {
+        a = "SandWorldHomeStage";
+        Orig(i, r, a, b);
+        svcOutputDebugString(a, 0x50);
+    }
+};
+
+HOOK_DEFINE_TRAMPOLINE(PresetTest) {
+    static void Callback(al::Scene *s, const char *stage, int scenario) {
+        //stage = "SandWorldHomeStage";
+        //scenario = 0;
+        rs::registerGraphicsPresetPause(s);
+        Orig(s, stage, scenario);
+        //svcOutputDebugString(stage, 0x50);
+    }
+};
+
+namespace al {
+    class GraphicsPresetDirector {
+        public:
+        void registerPreset(char const*,char const*,char const*,bool);
+    };
+}
+
+HOOK_DEFINE_TRAMPOLINE(StageSceneControlHook) {
+    static void Callback(StageScene *scene) {
+        Orig(scene);
+    }
+};
+
+HOOK_DEFINE_TRAMPOLINE(InitGraphicsInfoHook) {
+    static void Callback(al::Scene *scene, char const *stage, int scenario) {
+        auto settings = DevGuiManager::instance()->getPresetSettings();
+        if (settings->mIsOverride) {
+            scenario = settings->mScenario;
+        }
+
+        Orig(scene, stage, scenario);
+    }
+};
+
+HOOK_DEFINE_TRAMPOLINE(RegisterPresetHook) {
+    static void Callback(al::GraphicsPresetDirector *presetDirector, char const* preset, char const* cubemap_location, char const* file, bool d) {
+        auto settings = DevGuiManager::instance()->getPresetSettings();
+
+        if (settings->mIsOverride) {
+            preset = settings->mPreset;
+            file = settings->mCubemap;
+            cubemap_location = "Default";
+        }
+
+        Orig(presetDirector, preset, cubemap_location, file, d);
+    }
+};
+
+HOOK_DEFINE_TRAMPOLINE(RequestPresetHook) {
+    static void Callback(al::GraphicsPresetDirector *presetDirector, char const* preset, int b, int c, int d, sead::Vector3<float> const& rot) {
+        auto settings = DevGuiManager::instance()->getPresetSettings();
+        if (settings->mIsOverride) {
+            preset = settings->mPreset;
+            b = 1000;
+            c = 0;
+            d = 0;
+        }
+
+        Orig(presetDirector, preset, b, c, d, rot);
+    }
+};
+
+HOOK_DEFINE_TRAMPOLINE(RequestCubeMapHook) {
+    static void Callback(void *cubeMapKeeper, int a, char const* location, char const* file) {
+        auto settings = DevGuiManager::instance()->getPresetSettings();
+        if (settings->mIsOverride) {
+            a = 1000;
+            location = "Default";
+            file = settings->mCubemap;
+        }
+
+        Orig(cubeMapKeeper, a, location, file);
+    }
+};
+
+void SkyInitHook(al::LiveActor *actor, al::ActorInitInfo const& info, sead::SafeStringBase<char> const& preset, char const* unk) {
+    auto settings = DevGuiManager::instance()->getPresetSettings();
+    if (settings->mIsOverride && settings->mIsOverrideSky) {
+        return al::initActorWithArchiveName(actor, info, settings->mSky, unk);
+    }
+    al::initActorWithArchiveName(actor, info, preset, unk);
+}
+
+#include <gfx/seadGraphicsContext.h>
+#include <agl/TextureSampler.h>
+#include <agl/DevTools.h>
+
+void ViewportApplyHook(sead::Viewport *viewport, agl::DrawContext *ctx, agl::RenderBuffer *buffer) {
+    auto settings = DevGuiManager::instance()->getGBufferSettings();
+
+    if (settings->mBuffer && settings->mEnable) {
+        auto b = settings->mBuffer;
+        agl::TextureData *apply = b->mGBufBaseColor;
+
+        switch (settings->mShowType) {
+            case 0: // Base Color
+                apply = b->mGBufBaseColor;
+                break;
+            case 1: // Normal
+                apply = b->mGBufNrmWorld;
+                break;
+            case 2: // Depth
+                apply = b->mGBufDepthView;
+                break;
+            case 3: // Light
+                apply = b->mGBufLightBuffer;
+                break;
+            case 4: // Motion
+                apply = b->mGBufMotionVec;
+                break;
+        }
+
+        sead::GraphicsContext context;
+        context.apply(ctx);
+
+        auto sampler = agl::TextureSampler();
+        sampler.applyTextureData(*apply);
+
+        agl::utl::ImageFilter2D::drawColorQuadTriangle(ctx, sead::Color4f::cBlack, 1.0f);
+        agl::utl::ImageFilter2D::drawTextureChannel(ctx, sampler, *viewport, settings->mChannel, sead::Vector2f(1280.f/apply->mSurface.mWidth, 720.f/apply->mSurface.mHeight), sead::Vector2f::zero);
+    
+    }
+
+    sead::Camera *cam;
+    __asm("MOV %0, X28" : "=r" (cam));
+
+    sead::Projection *projection;
+    __asm("MOV %0, X26" : "=r" (projection));
+
+    viewport->apply(ctx, (sead::LogicalFrameBuffer &)buffer);
+}
+
+HOOK_DEFINE_TRAMPOLINE(GetTexBufferHook) {
+    static void Callback(al::GBufferArray *buf) {
+        DevGuiManager::instance()->getGBufferSettings()->mBuffer = buf;
+
+        Orig(buf);
+    }
+};
+
 extern "C" void exl_main(void *x0, void *x1) {
     /* Setup hooking enviroment. */
     // envSetOwnProcessHandle(exl::util::proc_handle::Get());
@@ -236,6 +388,8 @@ extern "C" void exl_main(void *x0, void *x1) {
     GameSystemInit::InstallAtOffset(0x535850);
     ReplaceSeadPrint::InstallAtOffset(0xB59E28);
 
+    //StageSceneControlHook::InstallAtOffset(0x4CC348);
+
     // SD File Redirection
     RedirectFileDevice::InstallAtOffset(0x76CFE0);
     FileLoaderLoadArc::InstallAtOffset(0xA5EF64);
@@ -245,6 +399,17 @@ extern "C" void exl_main(void *x0, void *x1) {
 
     // Debug Text Writer Drawing
     UpdateLunaKit::InstallAtOffset(0x50F1D8);
+
+    InitGraphicsInfoHook::InstallAtOffset(0x9D0294);
+    RegisterPresetHook::InstallAtOffset(0x8764C0);
+    RequestPresetHook::InstallAtOffset(0x876FF0);
+    RequestCubeMapHook::InstallAtOffset(0xA02F3C);
+    patch::CodePatcher p(0x96F848);
+    p.BranchLinkInst((void*)SkyInitHook);
+
+    GetTexBufferHook::InstallAtOffset(0x9FEB70);
+    exl::patch::CodePatcher render(0x0087FF74);
+    render.BranchLinkInst((void*) ViewportApplyHook);
 
     // DevGui cheats
     exlSetupSettingsHooks(); // Located in devgui/settings/HooksSettings

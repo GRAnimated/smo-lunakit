@@ -21,5 +21,6 @@ namespace al {
 // TODO: get this out of here
 namespace rs
 {
+    void registerGraphicsPresetPause(al::Scene const*);
     void requestGraphicsPresetAndCubeMapPause(const al::Scene *);
 } // namespace rs

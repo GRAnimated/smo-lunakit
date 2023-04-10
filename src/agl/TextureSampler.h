@@ -7,11 +7,12 @@
 
 namespace agl
 {
-    class TextureSampler
-    {
-    public:
-        void* unk1;
-        TextureData mTextureData;
-        char unk2[0x40];
+    class ShaderLocation;
+
+    struct TextureSampler {
+        TextureSampler();
+        TextureSampler(agl::TextureData const&);
+        void applyTextureData(agl::TextureData const&);
+        bool activate(agl::DrawContext *,agl::ShaderLocation const&,int,bool) const;
     };
 };
